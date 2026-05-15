@@ -1,0 +1,6 @@
+*.pyc
+__pycache__/
+*.Zone.Identifier
+build/
+install/
+log/
