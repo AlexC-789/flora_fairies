@@ -1,40 +1,86 @@
 #!/usr/bin/env python3
-
-#ROS client library 
 import rclpy
-#Node is base class for everything in ROS2 (every robot component should be a node)
 from rclpy.node import Node
-#Package of standard message types for describing movement and geometry -> TwistStamped contain a header (timestamp & frame) and twist (linear speed & angluar speed)
-from geometry_msgs.msg import TwistStamped  # ← changed
-#used for sleep() to control how long the robot moves
+from geometry_msgs.msg import TwistStamped
+from sensor_msgs.msg import LaserScan
 import time
 
-#Class inherits from Node (routerunner is a ROS2 node, get built in abilites)
 class RouteRunner(Node):
     def __init__(self):
         super().__init__('route_runner')
-        self.publisher_ = self.create_publisher(TwistStamped, '/cmd_standard', 10)  # Type of message, topic name, queue size
-        self.get_logger().info('Route Runner Node has been started') #instead of print use get_logger
+        self.publisher_ = self.create_publisher(TwistStamped, '/cmd_standard', 10)
+        
+        # Subscribe to LiDAR
+        self.scan_sub = self.create_subscription(
+            LaserScan, '/scan', self.lidar_callback, 10)
+        
+        self.last_min_distance = 100.0
+        self.safe_distance = 0.25
+        self.clear_count = 0          # ← counts consecutive clear readings
+        self.CLEAR_THRESHOLD = 5      # ← must be clear 5 times in a row to resume
+
+        self.get_logger().info('Route Runner Node has been started')
+
+    def lidar_callback(self, msg):
+        # Only check front 60 degrees (index 0-30 and 330-360)
+        front_ranges = (
+            list(msg.ranges[0:30]) + 
+            list(msg.ranges[330:360])
+        )
+        valid = [r for r in front_ranges if r > 0.01 and r < 10.0]
+        if valid:
+            self.last_min_distance = min(valid)
+
+    def is_blocked(self):
+        return self.last_min_distance < self.safe_distance
+
+    def wait_if_blocked(self):
+        """Pauses route until obstacle is consistently gone"""
+        if self.is_blocked():
+            self.get_logger().warn(
+                f'Obstacle at {self.last_min_distance:.2f}m — pausing...')
+            self._send_stop()
+            self.clear_count = 0
+
+            # Wait until clear 5 times in a row
+            while self.clear_count < self.CLEAR_THRESHOLD:
+                rclpy.spin_once(self, timeout_sec=0.1)
+                if not self.is_blocked():
+                    self.clear_count += 1
+                else:
+                    self.clear_count = 0  # reset if blocked again
+
+            self.get_logger().info('Consistently clear — resuming!')
 
     def move(self, linear=0.0, angular=0.0, duration=1.0):
-        msg = TwistStamped()  # changed, this will create a data container defined by ROS2 -> sends to cmd hardware controllers WHEN
-        msg.header.frame_id = 'base_link' #coordiante frame context so robot knows which direction forward is relative to its body  
-        msg.twist.linear.x = linear        #changed (now msg.twist.linear), forward/backward
-        msg.twist.angular.z = angular      #changed (now msg.twist.angular), turning
+        msg = TwistStamped()
+        msg.header.frame_id = 'base_link'
+        msg.twist.linear.x = linear
+        msg.twist.angular.z = angular
 
         end_time = time.time() + duration
 
         while time.time() < end_time:
-            msg.header.stamp = self.get_clock().now().to_msg()  #update timestamp each loop
+            rclpy.spin_once(self, timeout_sec=0.0)
+
+            if self.is_blocked():
+                remaining = end_time - time.time()
+                self.wait_if_blocked()
+                # Resume with remaining time
+                end_time = time.time() + remaining
+
+            msg.header.stamp = self.get_clock().now().to_msg()
             self.publisher_.publish(msg)
             time.sleep(0.1)
 
-        # Stop (Publish to standard topic so Mux knows we want to stay still)
+        self._send_stop()
+        time.sleep(1)
+
+    def _send_stop(self):
         stop_msg = TwistStamped()
         stop_msg.header.stamp = self.get_clock().now().to_msg()
         stop_msg.header.frame_id = 'base_link'
         self.publisher_.publish(stop_msg)
-        time.sleep(1)
 
     def run_route(self):
         self.get_logger().info('Starting route...')
@@ -55,18 +101,14 @@ def main(args=None):
     node = RouteRunner()
     time.sleep(2.0)
     try:
-        for i in range(5): #run 5 times
+        for i in range(5):
             node.get_logger().info(f'-~- Starting Lap {1+i} of 5 -~-')
             node.run_route()
-            time.sleep(2.0)        
+            time.sleep(2.0)
     except KeyboardInterrupt:
-        pass #Maybe add emergency stop if user presses key x? 
+        pass
     finally:
-        #node.get_logger().info('All 5 laps have been completed succesfully :)')
-        
-        stop_msg = TwistStamped()
-        stop_msg.header.stamp = node.get_clock().now().to_msg()
-        node.publisher_.publish(stop_msg)
+        node._send_stop()
         node.destroy_node()
         rclpy.shutdown()
 
