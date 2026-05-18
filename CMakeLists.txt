@@ -13,9 +13,12 @@ install(FILES package.xml
   DESTINATION share/${PROJECT_NAME}
 )
 
-ament_package()
 
 install(PROGRAMS
   route_runner.py
+  mux.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
+ament_package()
+
