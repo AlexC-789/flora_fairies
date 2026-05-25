@@ -17,6 +17,8 @@ install(FILES package.xml
 install(PROGRAMS
   route_runner.py
   mux.py
+  sensor_node.py
+  plant_monitor.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
