@@ -16,7 +16,7 @@ class SensorNode(Node):
             '/plant/measurement',
             10 #buffer size
         )
-
+        
         self.create_timer(3.0, self.test_timer)
         self.test_plants = [
             ('plant_01', 1, 3),
