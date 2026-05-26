@@ -17,6 +17,15 @@ class SensorNode(Node):
             10 #buffer size
         )
 
+        self.create_timer(3.0, self.test_timer)
+        self.test_plants = [
+            ('plant_01', 1, 3),
+            ('plant_02', 3, 1),
+            ('plant_03', 1, 1),
+            ('plant_04', 3, 3),
+        ]
+        self.test_index = 0
+
         # The subscriber receives correction commands from plant_monitor
         self.correction_sub = self.create_subscription(
             String,
@@ -26,6 +35,12 @@ class SensorNode(Node):
         )
 
         self.get_logger().info('Sensor node started')
+
+    def test_timer(self):
+        # cycles through all plants
+        plant_id, row, col = self.test_plants[self.test_index]
+        self.take_measurement(plant_id, row, col)
+        self.test_index = (self.test_index + 1) % len(self.test_plants)
 
     def take_measurement(self, plant_id, row, col):
         # Generates a fake temperature between 18 and 26 degrees.
