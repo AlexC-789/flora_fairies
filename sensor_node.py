@@ -5,6 +5,7 @@ import json #to convert between python dictionaries and text
 import random #to generate random numbers
 
 class SensorNode(Node):
+    
     def __init__(self):
         super().__init__('sensor_node')
 

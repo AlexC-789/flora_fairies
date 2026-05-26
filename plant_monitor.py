@@ -4,6 +4,7 @@ from std_msgs.msg import String
 import json
 
 class PlantMonitor(Node):
+    
     def __init__(self):
         super().__init__('plant_monitor')
 
@@ -62,10 +63,10 @@ class PlantMonitor(Node):
 
         if difference <= 2.0:
             # Temperature is fine
-            self.get_logger().info(f'Plant {plant_id}: {temp}°C ✅ healthy')
+            self.get_logger().info(f'Plant {plant_id}: {temp}°C healthy')
         else:
             # Temperature is outside range. Send correction
-            self.get_logger().warn(f'Plant {plant_id}: {temp}°C ⚠️ outside range!')
+            self.get_logger().warn(f'Plant {plant_id}: {temp}°C outside range!')
             self.send_correction(plant_id, temp, optimal)
 
     def send_correction(self, plant_id, temp, optimal):
