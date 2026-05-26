@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import rclpy #ROS 2 for python
 from rclpy.node import Node 
 from std_msgs.msg import String # to send text data between nodes
