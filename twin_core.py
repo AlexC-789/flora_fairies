@@ -147,40 +147,6 @@ class TwinCore(Node):
         msg.data = json.dumps(state)
         self.state_pub.publish(msg)
 
-    def astar(self, grid, start, goal):
-        open_set = []
-        closed_set = set()
-        came_from = {}
-        g_score = {start: 0}
-        heapq.heappush(open_set, (self.heuristic(start, goal), start))
-
-        while open_set:
-            _, current = heapq.heappop(open_set)
-            if current == goal:
-                path = [current]
-                while current in came_from:
-                    current = came_from[current]
-                    path.append(current)
-                return path[::-1]
-            closed_set.add(current)
-            row, col = current
-            for dr, dc in [(0,1),(1,0),(0,-1),(-1,0)]:
-                nr, nc = row+dr, col+dc
-                neighbor = (nr, nc)
-                if neighbor in closed_set:
-                    continue
-                if not (0 <= nr < len(grid) and 0 <= nc < len(grid[0])):
-                    continue
-                if grid[nr][nc] == 1:
-                    continue
-                tg = g_score[current] + 1
-                if neighbor not in g_score or tg < g_score[neighbor]:
-                    came_from[neighbor] = current
-                    g_score[neighbor] = tg
-                    f = tg + self.heuristic(neighbor, goal)
-                    heapq.heappush(open_set, (f, neighbor))
-        return None
-
     def heuristic(self, current, goal):
         return abs(current[0] - goal[0]) + abs(current[1] - goal[1])
 
