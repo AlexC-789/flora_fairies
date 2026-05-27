@@ -1,0 +1,7 @@
+# REQUEST (empty — no input needed, just asking for grid)
+#New file needed!!
+---
+# RESPONSE
+string grid_data
+float32 tile_size
+bool success
