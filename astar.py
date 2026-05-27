@@ -1,6 +1,4 @@
 import heapq
-#HELLLOOOOOO!!!!!!!!!!! :DDDDDDD
-#hey back
 def heuristic(current, goal):
     return abs(current[0] - goal[0]) + abs(current[1] - goal[1])
 
